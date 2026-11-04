@@ -3,6 +3,11 @@
 
 import { STAGE_TYPES } from './dspModel.js';
 
+/* Every text from the model is escaped before it goes into the SVG markup. */
+export function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
 export function renderDspSignalChainSvg(model, options = {}) {
   const { selectedStageId = null } = options;
 
@@ -20,7 +25,7 @@ export function renderDspSignalChainSvg(model, options = {}) {
     <g class="dsp-io-terminal" transform="translate(20, ${startY - 15})">
       <rect width="90" height="${nodeHeight + 30}" rx="6" fill="#18181b" stroke="#4A9EFF" stroke-width="1.5"/>
       <text x="45" y="22" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#4A9EFF">INPUTS</text>
-      <text x="45" y="42" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#f4f4f5">${model.inputs.length} Ch</text>
+      <text x="45" y="42" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#f4f4f5">${esc(model.inputs.length)} Ch</text>
       <text x="45" y="60" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#888888">Analog + Dante</text>
     </g>
     <!-- Wire connecting input to first stage -->
@@ -41,7 +46,7 @@ export function renderDspSignalChainSvg(model, options = {}) {
     `;
 
     return `
-      <g class="dsp-stage-node" data-stage-id="${stg.id}" transform="translate(${x}, ${y})" style="cursor: pointer;">
+      <g class="dsp-stage-node" data-stage-id="${esc(stg.id)}" transform="translate(${x}, ${y})" style="cursor: pointer;">
         <!-- Card Body -->
         <rect width="${nodeWidth}" height="${nodeHeight}" rx="6"
           fill="${isSelected ? '#2c2c2c' : '#18181b'}"
@@ -51,9 +56,9 @@ export function renderDspSignalChainSvg(model, options = {}) {
           opacity="${stg.bypassed ? 0.6 : 1.0}"
         />
         <!-- Stage Type Icon & Label -->
-        <text x="12" y="24" font-size="14">${def.icon}</text>
+        <text x="12" y="24" font-size="14">${esc(def.icon)}</text>
         <text x="${nodeWidth - 12}" y="20" text-anchor="end" font-family="'JetBrains Mono', monospace" font-size="9" fill="#888888">#${idx + 1}</text>
-        <text x="12" y="44" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#f4f4f5" clip-path="url(#text-clip)">${stg.label}</text>
+        <text x="12" y="44" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#f4f4f5" clip-path="url(#text-clip)">${esc(stg.label)}</text>
         
         <!-- Status indicator pill -->
         <rect x="12" y="54" width="${stg.bypassed ? 48 : 42}" height="16" rx="3" fill="${stg.bypassed ? '#3f3f46' : 'rgba(16, 185, 129, 0.2)'}"/>
@@ -71,7 +76,7 @@ export function renderDspSignalChainSvg(model, options = {}) {
     <g class="dsp-io-terminal" transform="translate(${outX}, ${startY - 15})">
       <rect width="90" height="${nodeHeight + 30}" rx="6" fill="#18181b" stroke="#22C55E" stroke-width="1.5"/>
       <text x="45" y="22" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" fill="#22C55E">OUTPUTS</text>
-      <text x="45" y="42" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#f4f4f5">${model.outputs.length} Ch</text>
+      <text x="45" y="42" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#f4f4f5">${esc(model.outputs.length)} Ch</text>
       <text x="45" y="60" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#888888">PA / Aux / Rec</text>
     </g>
   `;

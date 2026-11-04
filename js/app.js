@@ -1,22 +1,27 @@
 // Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
-import { BlockBridge } from './blockBridge.js';
+import { linkBlock, mountDiscovered } from './softappLink.js';
 import { DspModel, STAGE_TYPES } from './dspModel.js';
 import { renderDspSignalChainSvg } from './dspSvg.js';
 
 let model = new DspModel();
 
-const bridge = new BlockBridge({
-  name: 'DSP Mockup Editor',
-  type: 'dspmockup',
-  defaultBlock: model.toJSON(),
-  onBlockLoaded: (block) => {
-    if (block) {
-      model = new DspModel(block);
-      renderAll();
-    }
+const S = window.APKSoftapp;
+const esc = S.esc;
+
+const bridge = linkBlock(S, {
+  editor: 'DSP Mockup Editor',
+  blockType: 'dspmockup',
+  Model: DspModel,
+  getModel: () => model,
+  setModel: (m, meta) => {
+    model = m;
+    const tag = document.getElementById('block-tag');
+    if (tag && (meta.blockName || meta.filename)) tag.textContent = meta.blockName || meta.filename;
+    renderAll();
   },
+  filename: (m) => m.deviceMnemonic.toLowerCase(),
 });
 
 function renderPalette() {
@@ -24,11 +29,11 @@ function renderPalette() {
   if (!container) return;
 
   container.innerHTML = Object.entries(STAGE_TYPES).map(([key, def]) => `
-    <button class="btn btn-secondary btn-stage-add" data-stage-type="${key}" style="justify-content: flex-start; text-align: left; padding: 7px 10px;">
-      <span style="font-size: 15px; margin-right: 6px;">${def.icon}</span>
+    <button class="btn btn-secondary btn-stage-add" data-stage-type="${esc(key)}" style="justify-content: flex-start; text-align: left; padding: 7px 10px;">
+      <span style="font-size: 15px; margin-right: 6px;">${esc(def.icon)}</span>
       <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-        <div style="font-weight: 600; font-size: 11px;">${def.label}</div>
-        <div style="font-size: 9px; opacity: 0.7; font-family: var(--font-mono);">${def.defaultHours} hrs est.</div>
+        <div style="font-weight: 600; font-size: 11px;">${esc(def.label)}</div>
+        <div style="font-size: 9px; opacity: 0.7; font-family: var(--font-mono);">${esc(def.defaultHours)} hrs est.</div>
       </div>
     </button>
   `).join('');
@@ -38,7 +43,7 @@ function renderPalette() {
       const type = btn.getAttribute('data-stage-type');
       const newStage = model.addStage(type);
       model.selectedStageId = newStage.id;
-      bridge.notifyChanged();
+      bridge.changed();
       renderAll();
     });
   });
@@ -60,8 +65,8 @@ function renderInspector() {
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid var(--osc-border-default); padding-bottom: 8px;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="font-size: 16px;">${def.icon}</span>
-          <span style="font-weight: 700; color: var(--osc-text-primary); font-size: 13px;">${stage.label}</span>
+          <span style="font-size: 16px;">${esc(def.icon)}</span>
+          <span style="font-weight: 700; color: var(--osc-text-primary); font-size: 13px;">${esc(stage.label)}</span>
         </div>
         <button class="btn btn-secondary btn-sm" id="btn-delete-stage" style="color: var(--osc-status-danger);">🗑️ Delete</button>
       </div>
@@ -69,7 +74,7 @@ function renderInspector() {
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <div>
           <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">STAGE NAME / LABEL</label>
-          <input type="text" class="input" id="inp-label" value="${stage.label}">
+          <input type="text" class="input" id="inp-label" value="${esc(stage.label)}">
         </div>
 
         <div style="display: flex; gap: 8px; margin-top: 4px;">
@@ -80,29 +85,29 @@ function renderInspector() {
 
         ${stage.gain_db !== undefined ? `
           <div>
-            <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">GAIN TRIM (dB): <span id="val-gain">${stage.gain_db} dB</span></label>
-            <input type="range" min="-20" max="60" step="1" value="${stage.gain_db}" id="inp-gain" style="width: 100%;">
+            <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">GAIN TRIM (dB): <span id="val-gain">${esc(stage.gain_db)} dB</span></label>
+            <input type="range" min="-20" max="60" step="1" value="${esc(stage.gain_db)}" id="inp-gain" style="width: 100%;">
           </div>
         ` : ''}
 
         ${stage.freq_hz !== undefined ? `
           <div>
             <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">FREQUENCY (Hz)</label>
-            <input type="number" class="input" id="inp-freq" value="${stage.freq_hz}">
+            <input type="number" class="input" id="inp-freq" value="${esc(stage.freq_hz)}">
           </div>
         ` : ''}
 
         ${stage.delay_ms !== undefined ? `
           <div>
             <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">ALIGNMENT DELAY (ms)</label>
-            <input type="number" step="0.1" class="input" id="inp-delay" value="${stage.delay_ms}">
+            <input type="number" step="0.1" class="input" id="inp-delay" value="${esc(stage.delay_ms)}">
           </div>
         ` : ''}
 
         ${stage.threshold_db !== undefined ? `
           <div>
             <label style="display: block; font-size: 10px; color: var(--osc-text-muted); margin-bottom: 3px;">LIMITER THRESHOLD (dBFS)</label>
-            <input type="number" step="0.5" class="input" id="inp-thresh" value="${stage.threshold_db}">
+            <input type="number" step="0.5" class="input" id="inp-thresh" value="${esc(stage.threshold_db)}">
           </div>
         ` : ''}
 
@@ -110,7 +115,7 @@ function renderInspector() {
           <div style="font-size: 10px; color: var(--osc-text-muted); margin-bottom: 4px;">ESTIMATED COMMISSIONING LABOUR</div>
           <div style="display: flex; justify-content: space-between; font-weight: 600;">
             <span>Stage Configuration:</span>
-            <span style="color: var(--osc-accent-primary);">${def.defaultHours} Hours</span>
+            <span style="color: var(--osc-accent-primary);">${esc(def.defaultHours)} Hours</span>
           </div>
         </div>
       </div>
@@ -118,41 +123,41 @@ function renderInspector() {
 
     document.getElementById('btn-delete-stage')?.addEventListener('click', () => {
       model.deleteStage(stage.id);
-      bridge.notifyChanged();
+      bridge.changed();
       renderAll();
     });
 
     document.getElementById('btn-toggle-bypass')?.addEventListener('click', () => {
       model.toggleBypass(stage.id);
-      bridge.notifyChanged();
+      bridge.changed();
       renderAll();
     });
 
     document.getElementById('inp-label')?.addEventListener('input', (e) => {
       stage.label = e.target.value;
-      bridge.notifyChanged();
+      bridge.changed();
       renderSvg();
     });
 
     document.getElementById('inp-gain')?.addEventListener('input', (e) => {
       stage.gain_db = parseFloat(e.target.value) || 0;
       document.getElementById('val-gain').textContent = `${stage.gain_db} dB`;
-      bridge.notifyChanged();
+      bridge.changed();
     });
 
     document.getElementById('inp-freq')?.addEventListener('input', (e) => {
       stage.freq_hz = parseFloat(e.target.value) || 0;
-      bridge.notifyChanged();
+      bridge.changed();
     });
 
     document.getElementById('inp-delay')?.addEventListener('input', (e) => {
       stage.delay_ms = parseFloat(e.target.value) || 0;
-      bridge.notifyChanged();
+      bridge.changed();
     });
 
     document.getElementById('inp-thresh')?.addEventListener('input', (e) => {
       stage.threshold_db = parseFloat(e.target.value) || 0;
-      bridge.notifyChanged();
+      bridge.changed();
     });
 
   } else {
@@ -172,10 +177,10 @@ function renderLabourRollup() {
   const l = model.calculateLabourHours();
   container.innerHTML = `
     <div style="display: flex; align-items: center; gap: 14px; font-size: 10px; color: var(--osc-text-muted);">
-      <span>STAGES: <strong style="color: var(--osc-text-primary);">${model.stages.length}</strong></span>
-      <span>PROGRAMMING: <strong style="color: var(--osc-accent-secondary);">${l.programmingHours} hrs</strong></span>
-      <span>ROOM TUNING: <strong style="color: var(--osc-accent-secondary);">${l.roomTuningHours} hrs</strong></span>
-      <span>TOTAL DSP LABOUR: <strong style="color: var(--osc-accent-primary);">${l.totalHours} hrs</strong></span>
+      <span>STAGES: <strong style="color: var(--osc-text-primary);">${esc(model.stages.length)}</strong></span>
+      <span>PROGRAMMING: <strong style="color: var(--osc-accent-secondary);">${esc(l.programmingHours)} hrs</strong></span>
+      <span>ROOM TUNING: <strong style="color: var(--osc-accent-secondary);">${esc(l.roomTuningHours)} hrs</strong></span>
+      <span>TOTAL DSP LABOUR: <strong style="color: var(--osc-accent-primary);">${esc(l.totalHours)} hrs</strong></span>
     </div>
   `;
 }
@@ -227,9 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.onload = (event) => {
         try {
           const parsed = JSON.parse(event.target.result);
-          model = new DspModel(parsed);
-          bridge.loadBlock(model.toJSON(), { filename: file.name });
-          renderAll();
+          bridge.openLocal(parsed, { filename: file.name });
         } catch (err) {
           alert('Failed to parse DSP file: ' + err.message);
         }
@@ -239,17 +242,16 @@ document.addEventListener('DOMContentLoaded', () => {
     input.click();
   });
 
-  document.getElementById('btn-discovered')?.addEventListener('click', async () => {
-    const project = await bridge.fetchDiscoveredProject();
-    if (project) {
-      alert(`Discovered Project: ${project.project_name || 'DSP Core Systems'}\nStages: ${model.stages.length}`);
-    } else {
-      alert('Connecting to live discovery bus...');
-    }
+  mountDiscovered(S, window.APKTable, {
+    button: document.getElementById('btn-discovered'),
+    panel: document.getElementById('discovered-panel'),
+    status: document.getElementById('discovered-status'),
+    tableHost: document.getElementById('discovered-table'),
+    tableId: 'dspmockup-discovered',
   });
 
   document.getElementById('btn-save-block')?.addEventListener('click', () => {
-    bridge.saveBlock(model.toJSON(), { filename: model.deviceMnemonic.toLowerCase() });
+    bridge.save();
   });
 
   document.getElementById('btn-close')?.addEventListener('click', () => {

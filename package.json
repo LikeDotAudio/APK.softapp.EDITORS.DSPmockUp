@@ -4,6 +4,6 @@
   "type": "module",
   "description": "Audio DSP signal processing chain authoring and programming labour estimation",
   "scripts": {
-    "test": "node --test test/dsp.test.mjs"
+    "test": "node --test test/*.test.mjs"
   }
 }
