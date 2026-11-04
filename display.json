@@ -1,0 +1,8 @@
+{
+  "name": "DSP Mockup Editor",
+  "icon": "🎛️",
+  "group": "Design",
+  "description": "Audio DSP signal processing chain authoring and programming labour estimation",
+  "entrypoint": "index.html",
+  "blockTypes": ["dspmockup", "dsp", "audio_processing"]
+}

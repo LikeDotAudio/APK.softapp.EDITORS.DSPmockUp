@@ -1,0 +1,9 @@
+{
+  "name": "editors-dsp-mockup",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Audio DSP signal processing chain authoring and programming labour estimation",
+  "scripts": {
+    "test": "node --test test/dsp.test.mjs"
+  }
+}
