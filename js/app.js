@@ -1,7 +1,7 @@
 // Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
-import { linkBlock, mountDiscovered } from './softappLink.js';
+import { linkBlock, mountDiscovered, openJsonFile } from './softappLink.js';
 import { DspModel, STAGE_TYPES } from './dspModel.js';
 import { renderDspSignalChainSvg } from './dspSvg.js';
 
@@ -9,6 +9,26 @@ let model = new DspModel();
 
 const S = window.APKSoftapp;
 const esc = S.esc;
+
+S.describe({
+  name: 'DSP Mockup Editor',
+  does: 'Sketches a DSP signal chain as stages (gain, EQ, delay, dynamics...) and rolls up the programming and room-tuning labour hours. A mock-up: it controls no real DSP.',
+  inputs: [
+    { name: 'DSP mock-up block', from: 'the CAD (when opened from a drawing), or a .json file via Open Block', kind: 'file' },
+    { name: 'Discovered', from: 'the bus: what scanners and agents found (kinds in config/discovered.json), shown read-only', kind: 'bus' },
+  ],
+  outputs: [
+    { name: 'DSP mock-up block', to: 'the CAD on Save & Return and on every edit; standalone Save downloads <mnemonic>.json', kind: 'file' },
+    { name: 'Labour roll-up', to: 'the status bar: stages, programming, room tuning and total hours' },
+  ],
+  controls: [
+    { name: 'Stage palette', how: 'click a stage type to add it to the chain' },
+    { name: 'Click a stage', how: 'select it; click the background to deselect' },
+    { name: 'Inspector', how: 'label, Bypass, gain trim (slider, dB), frequency (Hz), delay (ms), threshold (dB), Delete' },
+    { name: 'Discovered / Open Block / Save & Return / Close', how: 'header buttons' },
+  ],
+  problems: ['bad_json', 'bad_input', 'file_unreadable', 'not_in_cad', 'bus_missing'],
+});
 
 const bridge = linkBlock(S, {
   editor: 'DSP Mockup Editor',
@@ -221,26 +241,10 @@ function renderAll() {
 document.addEventListener('DOMContentLoaded', () => {
   renderAll();
 
-  document.getElementById('btn-open-block')?.addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const parsed = JSON.parse(event.target.result);
-          bridge.openLocal(parsed, { filename: file.name });
-        } catch (err) {
-          alert('Failed to parse DSP file: ' + err.message);
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  });
+  document.getElementById('btn-open-block')?.addEventListener('click', () => openJsonFile(S, {
+    what: 'a DSP mock-up block',
+    onJson: (parsed, file) => bridge.openLocal(parsed, { filename: file.name }),
+  }));
 
   mountDiscovered(S, window.APKTable, {
     button: document.getElementById('btn-discovered'),
