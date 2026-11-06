@@ -1,9 +1,10 @@
 // Part of the APK.audio project — http://APK.audio — made by Anthony Kuzub
 // MIT Licence. Free, for everyone, for ever. Full text in LICENSE at the root.
 
-import { linkBlock, mountDiscovered, openJsonFile } from './softappLink.js';
+import { linkBlock, mountDiscovered } from './softappLink.js';
 import { DspModel, STAGE_TYPES } from './dspModel.js';
 import { renderDspSignalChainSvg } from './dspSvg.js';
+import { dspToIfc, dspFromIfc } from './dspIfc.js';
 
 let model = new DspModel();
 
@@ -14,11 +15,12 @@ S.describe({
   name: 'DSP Mockup Editor',
   does: 'Sketches a DSP signal chain as stages (gain, EQ, delay, dynamics...) and rolls up the programming and room-tuning labour hours. A mock-up: it controls no real DSP.',
   inputs: [
-    { name: 'DSP mock-up block', from: 'the CAD (when opened from a drawing), or a .json file via Open Block', kind: 'file' },
+    { name: 'DSP mock-up block', from: 'the CAD (when opened from a drawing), or via Open Block: the .json or its .ifc twin (APKSoftapp.openModel)', kind: 'file' },
     { name: 'Discovered', from: 'the bus: what scanners and agents found (kinds in config/discovered.json), shown read-only', kind: 'bus' },
   ],
   outputs: [
-    { name: 'DSP mock-up block', to: 'the CAD on Save & Return and on every edit; standalone Save downloads <mnemonic>.json', kind: 'file' },
+    { name: 'DSP mock-up block', to: 'the CAD on Save & Return and on every edit; standalone, Save Model writes <mnemonic>.json beside its .ifc twin', kind: 'file' },
+    { name: 'IFC twin', to: '<mnemonic>.ifc (IFC4X3_ADD2) with the .json when standalone: the frame an IfcAudioVisualAppliance (ObjectType DSP), inputs SINK and outputs SOURCE ports, the stages APK_DspChain (js/dspIfc.js)', kind: 'file' },
     { name: 'Labour roll-up', to: 'the status bar: stages, programming, room tuning and total hours' },
   ],
   controls: [
@@ -27,7 +29,7 @@ S.describe({
     { name: 'Inspector', how: 'label, Bypass, gain trim (slider, dB), frequency (Hz), delay (ms), threshold (dB), Delete' },
     { name: 'Discovered / Open Block / Save & Return / Close', how: 'header buttons' },
   ],
-  problems: ['bad_json', 'bad_input', 'file_unreadable', 'not_in_cad', 'bus_missing'],
+  problems: ['bad_json', 'bad_input', 'file_unreadable', 'not_in_cad', 'bus_missing', 'save_failed'],
 });
 
 const bridge = linkBlock(S, {
@@ -241,10 +243,22 @@ function renderAll() {
 document.addEventListener('DOMContentLoaded', () => {
   renderAll();
 
-  document.getElementById('btn-open-block')?.addEventListener('click', () => openJsonFile(S, {
-    what: 'a DSP mock-up block',
-    onJson: (parsed, file) => bridge.openLocal(parsed, { filename: file.name }),
-  }));
+  // Open Block: the .json or its .ifc twin (APKSoftapp.openModel), the same path a CAD load takes.
+  const openBlock = async () => {
+    const o = await S.openModel({ fromIfc: (text) => dspFromIfc(text), fromJson: (data) => data });
+    if (!o.ok) {
+      if (!o.cancelled && o.problem) {
+        S.showProblem(o.problem, {
+          fix: ['Open a DSP mock-up block .json or its .ifc twin (Save Model outside the CAD writes both).'],
+          onRetry: openBlock,
+        });
+      }
+      return;
+    }
+    bridge.openLocal(o.model, { filename: o.name });
+    bridge.changed();
+  };
+  document.getElementById('btn-open-block')?.addEventListener('click', openBlock);
 
   mountDiscovered(S, window.APKTable, {
     button: document.getElementById('btn-discovered'),
@@ -254,9 +268,15 @@ document.addEventListener('DOMContentLoaded', () => {
     tableId: 'dspmockup-discovered',
   });
 
-  document.getElementById('btn-save-block')?.addEventListener('click', () => {
-    bridge.save();
-  });
+  // In the CAD: the block back to the drawing. Standalone: Save Model, the .json AND its .ifc twin, both or neither.
+  const saveBlock = async () => {
+    if (bridge.host.embedded || typeof S.saveModel !== 'function') return bridge.save();
+    const name = model.deviceMnemonic.toLowerCase();
+    const r = await S.saveModel(model, { name, toJson: (m) => m.toJSON(), toIfc: (m) => dspToIfc(m, { name }) });
+    if (!r.ok && !r.cancelled) S.showProblem(r.problem || 'save_failed', { onRetry: saveBlock });
+    return r.ok ? 'model' : '';
+  };
+  document.getElementById('btn-save-block')?.addEventListener('click', () => { saveBlock(); });
 
   document.getElementById('btn-close')?.addEventListener('click', () => {
     bridge.close();
