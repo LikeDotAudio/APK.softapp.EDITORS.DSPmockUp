@@ -4,13 +4,13 @@ Is `EDITORS.DSPmockUp` deployed? Written by `.apk.scripts/smoke.py` from the mod
 
 ← [Wiki home](../README.md)
 
-**❌ FAIL** — 1/2 checks, since 2026-11-12 00:16 EST
+**✅ PASS** — 2/2 checks, since 2026-11-12 00:27 EST
 
 | Check | Target | Result | Detail |
 |---|---|---|---|
-| pushed | [APK.softapp.EDITORS.DSPmockUp](https://github.com/LikeDotAudio/APK.softapp.EDITORS.DSPmockUp.git) | ❌ | 1 commit(s) not pushed |
+| pushed | [APK.softapp.EDITORS.DSPmockUp](https://github.com/LikeDotAudio/APK.softapp.EDITORS.DSPmockUp.git) | ✅ | HEAD is on origin |
 | web | [index.html](https://apk.audio/APK%3ASoftapps/EDITORS/EDITORS.DSPmockUp/index.html) | ✅ | HTTP 200 |
 
 Re-run: `python3 .apk.scripts/smoke.py PODS/POD.THIN/Softapps/EDITORS/EDITORS.DSPmockUp`
 
-<!-- smoke:sig f44fb6a289ed since 2026-11-12 00:16 EST -->
+<!-- smoke:sig ae541e208521 since 2026-11-12 00:27 EST -->
